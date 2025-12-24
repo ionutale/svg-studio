@@ -1,38 +1,36 @@
-# sv
+# SVG Studio
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A powerful SVG editor built with Svelte 5 and Tailwind CSS.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Tools**: Select, Pen, Polygon, Rectangle, Circle, Text, Image.
+- **Editing**: Move, Resize, Rotate, Edit Points (Bezier curves).
+- **Styling**: Stroke, Fill, Stroke Width, Font Size.
+- **Layers**: Manage visibility, delete, reorder (z-index based on order).
+- **History**: Undo/Redo support.
+- **Animations**:
+  - Presets: Spin, Pulse, Bounce, Float, Color Cycle, Wiggle, Jello.
+  - Custom Keyframes: Create complex animations by capturing keyframes.
+  - Export: Exports as a standalone animated SVG file.
+- **Import**: Open existing SVG files or images.
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Tech Stack
 
-# create a new project in my-app
-npx sv create my-app
-```
+- **Framework**: Svelte 5 (Runes)
+- **Styling**: Tailwind CSS 4
+- **Icons**: Lucide Svelte
+- **Build Tool**: Vite
 
-## Developing
+## Development
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
 ## Building
 
-To create a production version of your app:
-
-```sh
+```bash
 npm run build
 ```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
