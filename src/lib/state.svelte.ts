@@ -17,6 +17,10 @@ class EditorState {
     activePolyId = $state<string | null>(null);
 
     selectedPointIndex = $state<number | null>(null);
+    multiSelectedIds = $state<string[]>([]);
+    showShortcuts = $state(false);
+    snapToGrid = $state(false);
+    marqueeRect = $state<{ x: number; y: number; w: number; h: number } | null>(null);
     contextMenu = $state<ContextMenuState | null>(null);
 
     sidebarTab = $state<'layers' | 'history' | 'properties'>('layers');
@@ -95,6 +99,7 @@ class EditorState {
         newHistory.push(newState);
         this.history = newHistory;
         this.historyStep = newHistory.length - 1;
+        this.saveToLocalStorage();
     }
 
     restoreState(index: number) {
@@ -157,12 +162,123 @@ class EditorState {
 
     // --- Action Helpers ---
     deleteSelected() {
-        if (this.selectedId) {
-            const newShapes = this.shapes.filter((s) => s.id !== this.selectedId);
+        const idsToRemove = this.multiSelectedIds.length > 0 ? this.multiSelectedIds : (this.selectedId ? [this.selectedId] : []);
+        if (idsToRemove.length > 0) {
+            const newShapes = this.shapes.filter((s) => !idsToRemove.includes(s.id));
             this.shapes = newShapes;
-            this.addToHistory(newShapes, 'Delete Item');
+            this.addToHistory(newShapes, `Delete ${idsToRemove.length} Item(s)`);
             this.selectedId = null;
+            this.multiSelectedIds = [];
             this.selectedPointIndex = null;
+        }
+    }
+
+    moveLayer(id: string, direction: 'up' | 'down') {
+        const index = this.shapes.findIndex(s => s.id === id);
+        if (index === -1) return;
+        const newShapes = [...this.shapes];
+        if (direction === 'up' && index < newShapes.length - 1) {
+            [newShapes[index], newShapes[index + 1]] = [newShapes[index + 1], newShapes[index]];
+        } else if (direction === 'down' && index > 0) {
+            [newShapes[index], newShapes[index - 1]] = [newShapes[index - 1], newShapes[index]];
+        }
+        this.shapes = newShapes;
+        this.addToHistory(newShapes, `Move Layer ${direction}`);
+    }
+
+    alignSelected(direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') {
+        const ids = this.multiSelectedIds.length > 0 ? this.multiSelectedIds : (this.selectedId ? [this.selectedId] : []);
+        if (ids.length <= 1) return;
+
+        const selectedShapes = this.shapes.filter(s => ids.includes(s.id));
+        let minX = Math.min(...selectedShapes.map(s => s.x));
+        let minY = Math.min(...selectedShapes.map(s => s.y));
+        let maxX = Math.max(...selectedShapes.map(s => s.x + (s.width || 0)));
+        let maxY = Math.max(...selectedShapes.map(s => s.y + (s.height || 0)));
+        let centerX = (minX + maxX) / 2;
+        let centerY = (minY + maxY) / 2;
+
+        const newShapes = this.shapes.map(s => {
+            if (!ids.includes(s.id)) return s;
+            let newX = s.x;
+            let newY = s.y;
+            const w = s.width || 0;
+            const h = s.height || 0;
+
+            if (direction === 'left') newX = minX;
+            else if (direction === 'right') newX = maxX - w;
+            else if (direction === 'center') newX = centerX - w / 2;
+            else if (direction === 'top') newY = minY;
+            else if (direction === 'bottom') newY = maxY - h;
+            else if (direction === 'middle') newY = centerY - h / 2;
+
+            return { ...s, x: newX, y: newY };
+        });
+
+        this.shapes = newShapes;
+        this.addToHistory(newShapes, `Align ${direction}`);
+    }
+
+    distributeSelected(axis: 'h' | 'v') {
+        const ids = this.multiSelectedIds.length > 0 ? this.multiSelectedIds : (this.selectedId ? [this.selectedId] : []);
+        if (ids.length <= 2) return;
+
+        let selectedShapes = this.shapes.filter(s => ids.includes(s.id));
+        if (axis === 'h') {
+            selectedShapes.sort((a, b) => a.x - b.x);
+            const totalW = selectedShapes.reduce((acc, s) => acc + (s.width || 0), 0);
+            const minX = selectedShapes[0].x;
+            const maxX = selectedShapes[selectedShapes.length - 1].x + (selectedShapes[selectedShapes.length - 1].width || 0);
+            const space = (maxX - minX - totalW) / (selectedShapes.length - 1);
+
+            let currentX = minX;
+            const newShapes = this.shapes.map(s => {
+                const idx = selectedShapes.findIndex(ss => ss.id === s.id);
+                if (idx === -1) return s;
+                const updated = { ...s, x: currentX };
+                currentX += (s.width || 0) + space;
+                return updated;
+            });
+            this.shapes = newShapes;
+        } else {
+            selectedShapes.sort((a, b) => a.y - b.y);
+            const totalH = selectedShapes.reduce((acc, s) => acc + (s.height || 0), 0);
+            const minY = selectedShapes[0].y;
+            const maxY = selectedShapes[selectedShapes.length - 1].y + (selectedShapes[selectedShapes.length - 1].height || 0);
+            const space = (maxY - minY - totalH) / (selectedShapes.length - 1);
+
+            let currentY = minY;
+            const newShapes = this.shapes.map(s => {
+                const idx = selectedShapes.findIndex(ss => ss.id === s.id);
+                if (idx === -1) return s;
+                const updated = { ...s, y: currentY };
+                currentY += (s.height || 0) + space;
+                return updated;
+            });
+            this.shapes = newShapes;
+        }
+        this.addToHistory(this.shapes, `Distribute ${axis === 'h' ? 'Horizontally' : 'Vertically'}`);
+    }
+
+    saveToLocalStorage() {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('svg-studio-shapes', JSON.stringify(this.shapes));
+        }
+    }
+
+    loadFromLocalStorage() {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('svg-studio-shapes');
+            if (saved) {
+                try {
+                    const loaded = JSON.parse(saved);
+                    if (Array.isArray(loaded) && loaded.length > 0) {
+                        this.shapes = loaded;
+                        this.showWelcome = false;
+                        this.addToHistory(loaded, 'Loaded from Storage');
+                    }
+                } catch (e) { console.error("Failed to load state", e); }
+            }
         }
     }
 
@@ -435,7 +551,7 @@ class EditorState {
     }
 
     // --- Export ---
-    handleExport() {
+    getSVGContent() {
         let minX = Infinity,
             minY = Infinity,
             maxX = -Infinity,
@@ -466,10 +582,7 @@ class EditorState {
         });
 
         if (minX === Infinity) {
-            minX = 0;
-            minY = 0;
-            maxX = 800;
-            maxY = 600;
+            minX = 0; minY = 0; maxX = 800; maxY = 600;
         }
 
         const w = maxX - minX;
@@ -480,7 +593,7 @@ class EditorState {
             .map((s) => generateAnimationCSS(s))
             .join('\n');
 
-        const svgContent = `
+        return `
       <style>
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -509,52 +622,53 @@ class EditorState {
             </linearGradient>
         </defs>
         ${this.shapes
-            .filter((s) => s.visible)
-            .map((s) => {
-                const anim = s.animation;
-                let style = `transform-box: fill-box; transform-origin: center;`;
+                .filter((s) => s.visible)
+                .map((s) => {
+                    const anim = s.animation;
+                    let style = `transform-box: fill-box; transform-origin: center;`;
 
-                if (anim) {
-                    if (anim.type === 'color-cycle') {
-                        style += ` animation: color-cycle ${anim.duration}s ${anim.timingFunction} ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
-                    } else if (anim.type === 'custom' && anim.steps && anim.steps.length > 0) {
-                        const totalDur = anim.steps.reduce((acc, step) => acc + step.duration, 0);
-                        style += ` animation: anim-${s.id} ${totalDur}s linear ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
-                    } else if (anim.type !== 'none' && anim.type !== 'gradient') {
-                        style += ` animation: ${anim.type} ${anim.duration}s ${anim.timingFunction} ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
+                    if (anim) {
+                        if (anim.type === 'color-cycle') {
+                            style += ` animation: color-cycle ${anim.duration}s ${anim.timingFunction} ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
+                        } else if (anim.type === 'custom' && anim.steps && anim.steps.length > 0) {
+                            const totalDur = anim.steps.reduce((acc, step) => acc + step.duration, 0);
+                            style += ` animation: anim-${s.id} ${totalDur}s linear ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
+                        } else if (anim.type !== 'none' && anim.type !== 'gradient') {
+                            style += ` animation: ${anim.type} ${anim.duration}s ${anim.timingFunction} ${anim.delay}s ${anim.infinite ? 'infinite' : '1'} ${anim.direction} ${anim.fillMode};`;
+                        }
                     }
-                }
 
-                const fill = anim && anim.type === 'gradient' ? 'url(#rainbow-flow)' : s.fill;
+                    const fill = anim && anim.type === 'gradient' ? 'url(#rainbow-flow)' : s.fill;
 
-                if (s.type === 'image' && s.href) {
-                    return `<image href="${s.href}" x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" preserveAspectRatio="none" style="${style}" />`;
-                }
-                if (s.type === 'text') {
-                    return `<text x="${s.x}" y="${s.y}" fill="${s.stroke}" font-size="${s.fontSize || 24}" font-family="sans-serif" style="${style}">${s.text}</text>`;
-                }
+                    if (s.type === 'image' && s.href) {
+                        return `<image href="${s.href}" x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" preserveAspectRatio="none" style="${style}" />`;
+                    }
+                    if (s.type === 'text') {
+                        return `<text x="${s.x}" y="${s.y}" fill="${s.stroke}" font-size="${s.fontSize || 24}" font-family="sans-serif" style="${style}">${s.text}</text>`;
+                    }
 
-                const d = getShapePathData(s);
-
-                if (s.type === 'path' && s.pathData) {
-                    return `<path d="${d}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" transform="translate(${s.x},${s.y})" style="${style}" />`;
-                }
-
-                if (s.type === 'path') {
-                    return `<path d="${d}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" style="${style}" />`;
-                }
-                if (s.type === 'rect') {
-                    return `<rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" style="${style}" />`;
-                }
-                if (s.type === 'circle') {
-                    return `<ellipse cx="${s.x + (s.width || 0) / 2}" cy="${s.y + (s.height || 0) / 2}" rx="${(s.width || 0) / 2}" ry="${(s.height || 0) / 2}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" style="${style}" />`;
-                }
-                return '';
-            })
-            .join('')}
+                    const d = getShapePathData(s);
+                    if (s.type === 'path' && s.pathData) {
+                        return `<path d="${d}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" transform="translate(${s.x},${s.y})" style="${style}" />`;
+                    }
+                    if (s.type === 'path') {
+                        return `<path d="${d}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" style="${style}" />`;
+                    }
+                    if (s.type === 'rect') {
+                        return `<rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" style="${style}" />`;
+                    }
+                    if (s.type === 'circle') {
+                        return `<ellipse cx="${s.x + (s.width || 0) / 2}" cy="${s.y + (s.height || 0) / 2}" rx="${(s.width || 0) / 2}" ry="${(s.height || 0) / 2}" fill="${fill}" stroke="${s.stroke}" stroke-width="${s.strokeWidth}" style="${style}" />`;
+                    }
+                    return '';
+                })
+                .join('')}
       </svg>
     `;
+    }
 
+    handleExport() {
+        const svgContent = this.getSVGContent();
         const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -563,6 +677,13 @@ class EditorState {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    copySVGToClipboard() {
+        const svgContent = this.getSVGContent();
+        navigator.clipboard.writeText(svgContent).then(() => {
+            alert('SVG code copied to clipboard!');
+        });
     }
 
     // --- Interaction Handlers ---
@@ -643,9 +764,34 @@ class EditorState {
 
         if (this.tool === 'select') {
             if (e.target === this.svgRef || (e.target as Element).getAttribute('id') === 'main-svg-bg') {
-                this.selectedId = null;
-                this.selectedPointIndex = null;
+                if (e.shiftKey) {
+                    // Start marquee
+                    this.marqueeRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
+                } else {
+                    this.selectedId = null;
+                    this.multiSelectedIds = [];
+                    this.selectedPointIndex = null;
+                    this.marqueeRect = { x: pos.x, y: pos.y, w: 0, h: 0 }; // Start marquee on click too
+                }
             } else {
+                const targetId = (e.target as Element).closest('[data-shape-id]')?.getAttribute('data-shape-id');
+                if (targetId) {
+                    if (e.shiftKey) {
+                        if (this.multiSelectedIds.includes(targetId)) {
+                            this.multiSelectedIds = this.multiSelectedIds.filter(id => id !== targetId);
+                        } else {
+                            if (this.selectedId && !this.multiSelectedIds.includes(this.selectedId)) {
+                                this.multiSelectedIds = [...this.multiSelectedIds, this.selectedId, targetId];
+                            } else {
+                                this.multiSelectedIds = [...this.multiSelectedIds, targetId];
+                            }
+                        }
+                        this.selectedId = targetId;
+                    } else {
+                        this.selectedId = targetId;
+                        this.multiSelectedIds = [];
+                    }
+                }
                 this.sidebarTab = 'properties';
             }
             return;
@@ -718,6 +864,24 @@ class EditorState {
             const dy = e.clientY - this.dragStart.y;
             this.view = { ...this.view, x: this.view.x + dx, y: this.view.y + dy };
             this.dragStart = { x: e.clientX, y: e.clientY };
+            return;
+        }
+
+        if (this.tool === 'select' && this.marqueeRect) {
+            const x = Math.min(this.dragStartWorld!.x, pos.x);
+            const y = Math.min(this.dragStartWorld!.y, pos.y);
+            const w = Math.abs(this.dragStartWorld!.x - pos.x);
+            const h = Math.abs(this.dragStartWorld!.y - pos.y);
+            this.marqueeRect = { x, y, w, h };
+
+            // Find shapes in marquee
+            const insideIds = this.shapes.filter(s => {
+                const sw = s.width || 0;
+                const sh = s.height || 0;
+                return s.x >= x && s.y >= y && s.x + sw <= x + w && s.y + sh <= y + h;
+            }).map(s => s.id);
+            this.multiSelectedIds = insideIds;
+            if (insideIds.length === 1) this.selectedId = insideIds[0];
             return;
         }
 
@@ -872,16 +1036,15 @@ class EditorState {
     }
 
     handlePointerUp() {
+        if (this.isDragging && this.isDirty) {
+            this.addToHistory(this.shapes, `Modify ${this.multiSelectedIds.length > 1 ? 'Multiple' : 'Shape'}`);
+        }
         this.isDragging = false;
-        this.dragStart = null;
-        this.dragStartWorld = null;
         this.dragHandle = null;
         this.dragPointIndex = null;
-
-        if (this.isDirty) {
-            this.addToHistory(this.shapes, 'Modify Shape');
-            this.isDirty = false;
-        }
+        this.marqueeRect = null;
+        this.dragStartWorld = null;
+        this.isDirty = false;
     }
 
     handleDoubleClick() {
@@ -902,35 +1065,68 @@ class EditorState {
     }
 
     handleKeyDown(e: KeyboardEvent) {
+        if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
         const panSpeed = 20;
         if (e.key === 'ArrowUp') this.view = { ...this.view, y: this.view.y + panSpeed };
         if (e.key === 'ArrowDown') this.view = { ...this.view, y: this.view.y - panSpeed };
         if (e.key === 'ArrowLeft') this.view = { ...this.view, x: this.view.x + panSpeed };
         if (e.key === 'ArrowRight') this.view = { ...this.view, x: this.view.x - panSpeed };
 
-        if (e.code === 'Space') this.isSpacePressed = true;
+        if (e.code === 'Space') {
+            this.isSpacePressed = true;
+            e.preventDefault();
+        }
+
         if (e.key === 'Escape') {
             if (this.activePolyId) {
                 this.shapes = this.shapes.filter((s) => s.id !== this.activePolyId);
                 this.activePolyId = null;
             } else {
                 this.selectedId = null;
+                this.multiSelectedIds = [];
                 this.selectedPointIndex = null;
                 this.contextMenu = null;
                 if (this.editingStepId) this.editingStepId = null;
             }
         }
+
         if (e.key === 'Enter' && this.activePolyId) this.finishPolygon();
-        if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedId && !this.activePolyId)
+        if ((e.key === 'Delete' || e.key === 'Backspace') && (this.selectedId || this.multiSelectedIds.length > 0) && !this.activePolyId)
             this.deleteSelected();
-        if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-            e.preventDefault();
-            if (e.shiftKey) this.redo();
-            else this.undo();
+
+        if ((e.metaKey || e.ctrlKey)) {
+            if (e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) this.redo();
+                else this.undo();
+            }
+            if (e.key === 'y') {
+                e.preventDefault();
+                this.redo();
+            }
+            if (e.key === '/') {
+                this.showShortcuts = !this.showShortcuts;
+            }
         }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-            e.preventDefault();
-            this.redo();
+
+        if (e.key === '?') {
+            this.showShortcuts = !this.showShortcuts;
+        }
+
+        const keyMap: Record<string, Tool> = {
+            v: 'select',
+            h: 'hand',
+            p: 'pen',
+            r: 'rect',
+            c: 'circle',
+            t: 'text',
+            l: 'poly',
+            i: 'poly' // Also I for poly
+        };
+
+        if (keyMap[e.key.toLowerCase()]) {
+            this.tool = keyMap[e.key.toLowerCase()];
         }
     }
 
@@ -940,3 +1136,4 @@ class EditorState {
 }
 
 export const editor = new EditorState();
+editor.loadFromLocalStorage();

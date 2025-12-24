@@ -3,10 +3,13 @@
     import { getShapePathData } from '../utils';
 </script>
 
-{#if editor.selectedId && editor.tool === 'select' && editor.selectedShape && editor.selectedShape.visible}
-    {@const shape = editor.selectedShape}
-    {@const handleSize = 8 / editor.view.zoom}
-    {@const strokeW = 1 / editor.view.zoom}
+{#if editor.tool === 'select'}
+    {#each (editor.selectedId ? [editor.selectedId] : editor.multiSelectedIds) as sid (sid)}
+        {@const shape = editor.shapes.find(s => s.id === sid)}
+        {#if shape && shape.visible}
+            {@const handleSize = 8 / editor.view.zoom}
+            {@const strokeW = 1 / editor.view.zoom}
+            {@const isPrimary = sid === editor.selectedId}
 
     {#if shape.type === 'text'}
         {@const estWidth = (shape.text?.length || 0) * (shape.fontSize || 24) * 0.6}
@@ -117,7 +120,7 @@
         </g>
     {/if}
 
-    {#if shape.width !== undefined}
+    {#if shape.width !== undefined && (isPrimary || editor.multiSelectedIds.length > 0)}
         {@const right = shape.x + (shape.width || 0)}
         {@const bottom = shape.y + (shape.height || 0)}
         {@const handleW = 10 / editor.view.zoom}
@@ -187,21 +190,25 @@
             />
             <!-- SE -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <rect
-                x={right - handleW / 2}
-                y={bottom - handleW / 2}
-                width={handleW}
-                height={handleW}
-                fill="white"
-                stroke="#3b82f6"
-                style="cursor: se-resize"
-                onpointerdown={(e) => {
-                    e.stopPropagation();
-                    editor.dragHandle = 'se';
-                    editor.isDragging = true;
-                    editor.dragStartWorld = editor.getMousePos(e);
-                }}
-            />
+            {#if isPrimary}
+                <rect
+                    x={right - handleW / 2}
+                    y={bottom - handleW / 2}
+                    width={handleW}
+                    height={handleW}
+                    fill="white"
+                    stroke="#3b82f6"
+                    style="cursor: se-resize"
+                    onpointerdown={(e) => {
+                        e.stopPropagation();
+                        editor.dragHandle = 'se';
+                        editor.isDragging = true;
+                        editor.dragStartWorld = editor.getMousePos(e);
+                    }}
+                />
+            {/if}
         </g>
     {/if}
+    {/if}
+    {/each}
 {/if}
