@@ -24,6 +24,7 @@ class EditorState {
     contextMenu = $state<ContextMenuState | null>(null);
 
     sidebarTab = $state<'layers' | 'history' | 'properties'>('layers');
+    isMobileSidebarOpen = $state(false);
 
     history = $state<HistoryState[]>([
         {
@@ -54,6 +55,10 @@ class EditorState {
 
     svgRef: SVGSVGElement | undefined = $state();
     containerRef: HTMLDivElement | undefined = $state();
+
+    activePointers = $state(new Map<number, { x: number, y: number }>());
+    lastPinchDistance = $state<number | null>(null);
+    lastPinchMidpoint = $state<{ x: number, y: number } | null>(null);
 
     selectedShape = $derived(this.selectedId ? this.shapes.find((s) => s.id === this.selectedId) : null);
 
@@ -717,6 +722,15 @@ class EditorState {
     }
 
     handlePointerDown(e: PointerEvent) {
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (this.activePointers.size === 2) {
+            this.lastPinchDistance = this.getPinchDistance();
+            this.lastPinchMidpoint = this.getPinchMidpoint();
+            this.isDragging = false; // Disable dragging when pinching
+            return;
+        }
+
         const pos = this.getMousePos(e);
 
         if (this.contextMenu) this.contextMenu = null;
@@ -857,6 +871,15 @@ class EditorState {
     }
 
     handlePointerMove(e: PointerEvent) {
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (this.activePointers.size === 2) {
+            this.handlePinch();
+            return;
+        }
+
+        if (!this.isDragging && !this.marqueeRect) return;
+
         const pos = this.getMousePos(e);
 
         if (this.dragHandle === 'pan' && this.dragStart) {
@@ -1035,7 +1058,18 @@ class EditorState {
         }
     }
 
-    handlePointerUp() {
+    handlePointerUp(e?: PointerEvent) {
+        if (e) {
+            this.activePointers.delete(e.pointerId);
+        } else {
+            this.activePointers.clear();
+        }
+
+        if (this.activePointers.size < 2) {
+            this.lastPinchDistance = null;
+            this.lastPinchMidpoint = null;
+        }
+
         if (this.isDragging && this.isDirty) {
             this.addToHistory(this.shapes, `Modify ${this.multiSelectedIds.length > 1 ? 'Multiple' : 'Shape'}`);
         }
@@ -1132,6 +1166,53 @@ class EditorState {
 
     handleKeyUp(e: KeyboardEvent) {
         if (e.code === 'Space') this.isSpacePressed = false;
+    }
+
+    private getPinchDistance() {
+        const pointers = Array.from(this.activePointers.values());
+        const dx = pointers[0].x - pointers[1].x;
+        const dy = pointers[0].y - pointers[1].y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    private getPinchMidpoint() {
+        const pointers = Array.from(this.activePointers.values());
+        return {
+            x: (pointers[0].x + pointers[1].x) / 2,
+            y: (pointers[0].y + pointers[1].y) / 2
+        };
+    }
+
+    private handlePinch() {
+        if (!this.containerRef) return;
+        const distance = this.getPinchDistance();
+        const midpoint = this.getPinchMidpoint();
+
+        if (this.lastPinchDistance && this.lastPinchMidpoint) {
+            const ratio = distance / this.lastPinchDistance;
+            const newZoom = Math.min(Math.max(this.view.zoom * ratio, 0.1), 10);
+
+            const rect = this.containerRef.getBoundingClientRect();
+            const mouseX = midpoint.x - rect.left;
+            const mouseY = midpoint.y - rect.top;
+
+            const worldX = (mouseX - this.view.x) / this.view.zoom;
+            const worldY = (mouseY - this.view.y) / this.view.zoom;
+
+            const newX = mouseX - worldX * newZoom;
+            const newY = mouseY - worldY * newZoom;
+
+            this.view = { x: newX, y: newY, zoom: newZoom };
+
+            // Also pan the view based on midpoint movement
+            const dx = midpoint.x - this.lastPinchMidpoint.x;
+            const dy = midpoint.y - this.lastPinchMidpoint.y;
+            this.view.x += dx;
+            this.view.y += dy;
+        }
+
+        this.lastPinchDistance = distance;
+        this.lastPinchMidpoint = midpoint;
     }
 }
 

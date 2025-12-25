@@ -30,62 +30,62 @@
 </script>
 
 <div
-	class="z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/80 px-6 backdrop-blur-md"
+	class="z-30 flex h-16 md:h-20 items-center justify-between border-b border-slate-200 bg-white/80 px-4 md:px-6 backdrop-blur-md"
 >
-	<div class="flex items-center space-x-8">
+	<div class="flex items-center space-x-3 md:space-x-8">
 		<div class="flex flex-col">
-			<h1 class="text-lg font-black tracking-tighter text-slate-900">
-				SVG<span class="text-blue-600">STUDIO</span>
+			<h1 class="text-base md:text-lg font-black tracking-tighter text-slate-900">
+				SVG<span class="text-blue-600 md:inline hidden">STUDIO</span>
 			</h1>
-			<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400"
+			<span class="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 md:block hidden"
 				>Digital Canvas</span
 			>
 		</div>
 
-		<div class="h-8 w-px bg-slate-200"></div>
+		<div class="h-8 w-px bg-slate-200 md:block hidden"></div>
 
-		<div class="flex items-center space-x-1.5 rounded-2xl bg-slate-100/50 p-1.5">
-			<!-- History Group -->
-			<div class="flex items-center space-x-0.5">
+		<div class="flex items-center space-x-1 md:space-x-1.5 rounded-xl md:rounded-2xl bg-slate-100/50 p-1 md:p-1.5 overflow-x-auto no-scrollbar max-w-[50vw] md:max-w-none">
+			<!-- History Group (Hidden on tiny screens) -->
+			<div class="hidden sm:flex items-center space-x-0.5">
 				<button
 					onclick={() => editor.undo()}
 					disabled={editor.historyStep <= 0}
-					class="rounded-xl p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900 hover:shadow-sm disabled:opacity-20"
+					class="rounded-lg md:rounded-xl p-1.5 md:p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900 disabled:opacity-20"
 					title="Undo"
 				>
-					<Undo size={19} strokeWidth={2.5} />
+					<Undo class="h-4 w-4 md:h-5 md:w-5" strokeWidth={2.5} />
 				</button>
 				<button
 					onclick={() => editor.redo()}
 					disabled={editor.historyStep >= editor.history.length - 1}
-					class="rounded-xl p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900 hover:shadow-sm disabled:opacity-20"
+					class="rounded-lg md:rounded-xl p-1.5 md:p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900 disabled:opacity-20"
 					title="Redo"
 				>
-					<Redo size={19} strokeWidth={2.5} />
+					<Redo class="h-4 w-4 md:h-5 md:w-5" strokeWidth={2.5} />
 				</button>
 			</div>
 
-			<div class="mx-1 h-6 w-px bg-slate-200"></div>
+			<div class="mx-1 h-6 w-px bg-slate-200 hidden sm:block"></div>
 
 			<!-- Interaction Group -->
 			<div class="flex items-center space-x-0.5">
 				<button
 					onclick={() => (editor.tool = 'hand')}
-					class={`rounded-xl p-2.5 transition-all ${
+					class={`rounded-lg md:rounded-xl p-1.5 md:p-2.5 transition-all ${
 						editor.tool === 'hand'
 							? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
-							: 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm'
+							: 'text-slate-500 hover:bg-white hover:text-slate-900'
 					}`}
 					title="Pan Tool (Spacebar)"
 				>
-					<Hand size={19} strokeWidth={2.5} />
+					<Hand class="h-4 w-4 md:h-5 md:w-5" strokeWidth={2.5} />
 				</button>
 
 				<label
-					class="cursor-pointer rounded-xl p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900 hover:shadow-sm"
+					class="cursor-pointer rounded-lg md:rounded-xl p-1.5 md:p-2.5 text-slate-500 transition-all hover:bg-white hover:text-slate-900"
 					title="Upload Image/SVG"
 				>
-					<Upload size={19} strokeWidth={2.5} />
+					<Upload class="h-4 w-4 md:h-5 md:w-5" strokeWidth={2.5} />
 					<input
 						type="file"
 						accept="image/*,.svg"
@@ -98,18 +98,18 @@
 			<div class="mx-1 h-6 w-px bg-slate-200"></div>
 
 			<!-- Tools Group -->
-			<div class="grid grid-cols-6 gap-0.5">
+			<div class="flex md:grid md:grid-cols-6 gap-0.5">
 				{#each tools as t}
 					<button
 						onclick={() => (editor.tool = t.id as any)}
-						class={`relative rounded-xl p-2.5 transition-all ${
+						class={`relative rounded-lg md:rounded-xl p-1.5 md:p-2.5 transition-all ${
 							editor.tool === t.id
 								? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
-								: 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm'
+								: 'text-slate-500 hover:bg-white hover:text-slate-900'
 						}`}
 						title={`${t.label} (${t.shortcut})`}
 					>
-						<t.icon size={19} strokeWidth={2.5} />
+						<t.icon class="h-4 w-4 md:h-5 md:w-5" strokeWidth={2.5} />
 						{#if editor.tool === t.id}
 							<div class="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white"></div>
 						{/if}
@@ -118,10 +118,10 @@
 			</div>
 		</div>
 
-		<div class="h-8 w-px bg-slate-200"></div>
+		<div class="h-8 w-px bg-slate-200 hidden lg:block"></div>
 
-		<!-- Appearance Quick Controls -->
-		<div class="flex items-center space-x-6">
+		<!-- Appearance Quick Controls (Desktop Only) -->
+		<div class="hidden lg:flex items-center space-x-6">
 			<div class="flex items-center space-x-3">
 				<div class="flex flex-col">
 					<span class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Stroke</span>
@@ -225,7 +225,6 @@
                 <span>Snap</span>
             </button>
 		</div>
-		</div>
 	</div>
 
 	<div class="flex items-center space-x-3">
@@ -240,31 +239,40 @@
 			</button>
 		{/if}
 		
-		<div class="flex items-center overflow-hidden rounded-xl bg-blue-600 shadow-lg shadow-blue-100 shadow-sm ring-1 ring-blue-500/50">
+		<div class="flex items-center overflow-hidden rounded-xl bg-blue-600 shadow-lg shadow-blue-100 ring-1 ring-blue-500/50">
 			<button
 				onclick={() => editor.handleExport()}
-				class="flex items-center space-x-2 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-blue-700"
+				class="flex items-center space-x-2 px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-bold text-white transition-all hover:bg-blue-700"
 			>
-				<Download size={18} strokeWidth={2.5} />
-				<span>EXPORT</span>
+				<Download class="h-4 w-4 md:h-[18px] md:w-[18px]" strokeWidth={2.5} />
+				<span class="md:inline hidden">EXPORT</span>
 			</button>
 			<div class="w-px h-6 bg-blue-500/50"></div>
 			<button 
                 onclick={() => editor.copySVGToClipboard()}
-                class="px-3 py-2.5 text-white transition-all hover:bg-blue-700"
+                class="px-2 md:px-3 py-2 md:py-2.5 text-white transition-all hover:bg-blue-700"
                 title="Copy SVG Code"
             >
-				<Code size={18} strokeWidth={2.5} />
+				<Code class="h-4 w-4 md:h-[18px] md:w-[18px]" strokeWidth={2.5} />
 			</button>
 		</div>
 
         <button 
             onclick={() => editor.showShortcuts = true}
-            class="group flex items-center justify-center rounded-full bg-slate-100 p-2.5 text-slate-400 transition-all hover:bg-blue-600 hover:text-white hover:shadow-lg hover:shadow-blue-100"
+            class="group hidden sm:flex items-center justify-center rounded-full bg-slate-100 p-2.5 text-slate-400 transition-all hover:bg-blue-600 hover:text-white"
             title="Keyboard Shortcuts"
         >
             <HelpCircle size={20} />
         </button>
-		</div>
 	</div>
 </div>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
+</style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Layers, History, Settings, ChevronRight } from 'lucide-svelte';
+	import { Layers, History, Settings, ChevronRight, X } from 'lucide-svelte';
 	import { editor } from '$lib/state.svelte';
 	import PropertiesPanel from './PropertiesPanel.svelte';
     import { 
@@ -33,8 +33,18 @@
 </script>
 
 <div
-	class="z-20 flex h-full w-80 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] transition-all duration-300"
+	class="z-20 flex h-full w-full md:w-80 flex-col overflow-hidden border-l border-slate-200 bg-white shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] transition-all duration-300"
 >
+    <!-- Mobile Header -->
+    <div class="flex items-center justify-between px-4 py-3 md:hidden border-b border-slate-100">
+        <h2 class="text-sm font-black uppercase tracking-widest text-slate-900">Editor Settings</h2>
+        <button 
+            onclick={() => editor.isMobileSidebarOpen = false}
+            class="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+        >
+            <X size={20} />
+        </button>
+    </div>
 	<!-- Tab Navigation -->
 	<div class="flex border-b border-slate-200 p-1.5">
 		{#each tabs as tab}

@@ -21,7 +21,8 @@
         AlignVerticalJustifyCenter,
         AlignEndVertical,
         Columns,
-        Rows
+        Rows,
+        Palette
     } from 'lucide-svelte';
 	import { editor } from '$lib/state.svelte';
 	import type { AnimationType, Shape } from '$lib/types';
@@ -142,6 +143,89 @@
                             value={Math.round(editor.selectedShape.height)}
                             onchange={(e) => updateVal('height', e.currentTarget.value)}
                             class="w-full rounded-xl border border-white bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm focus:border-blue-300 focus:outline-none"
+                        />
+                    </div>
+                {/if}
+            </div>
+        </div>
+
+        <!-- Style Group -->
+        <div class="rounded-3xl border border-slate-100 bg-slate-50/50 p-5">
+            <div class="mb-4 flex items-center space-x-2">
+                <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                    <Palette size={12} strokeWidth={3} />
+                </div>
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Style</h3>
+            </div>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-[9px] uppercase tracking-wide text-slate-400">Stroke</span>
+                        <input
+                            type="color"
+                            value={editor.selectedShape.stroke}
+                            oninput={(e) => editor.updateSelectedProperty('stroke', e.currentTarget.value)}
+                            class="h-10 w-full cursor-pointer overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm"
+                        />
+                    </div>
+                    <div class="flex flex-col space-y-1">
+                        <span class="text-[9px] uppercase tracking-wide text-slate-400">Fill</span>
+                        <div class="flex space-x-2">
+                            <input
+                                type="color"
+                                aria-label="Fill color"
+                                value={editor.selectedShape.fill === 'transparent' ? '#ffffff' : editor.selectedShape.fill}
+                                oninput={(e) => editor.updateSelectedProperty('fill', e.currentTarget.value)}
+                                class={`h-10 flex-1 cursor-pointer overflow-hidden rounded-xl border-2 border-white bg-white shadow-sm ${editor.selectedShape.fill === 'transparent' ? 'opacity-30' : ''}`}
+                                disabled={editor.selectedShape.fill === 'transparent'}
+                            />
+                            <button
+                                onclick={() => {
+                                    const newVal = editor.selectedShape!.fill === 'transparent' ? '#888888' : 'transparent';
+                                    editor.updateSelectedProperty('fill', newVal);
+                                }}
+                                class={`flex h-10 w-10 items-center justify-center rounded-xl text-[10px] font-bold uppercase transition-all ${
+                                    editor.selectedShape.fill === 'transparent'
+                                        ? 'bg-red-50 text-red-500'
+                                        : 'bg-white text-slate-400 hover:bg-slate-100'
+                                }`}
+                                title="Toggle Fill"
+                            >
+                                {editor.selectedShape.fill === 'transparent' ? 'None' : '❌'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {#if editor.selectedShape.type === 'text'}
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-[9px] uppercase tracking-wide text-slate-400">Font Size</span>
+                            <span class="text-[10px] font-black tabular-nums text-blue-600">{editor.selectedShape.fontSize || 24}px</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="10"
+                            max="120"
+                            value={editor.selectedShape.fontSize || 24}
+                            oninput={(e) => editor.updateSelectedProperty('fontSize', parseInt(e.currentTarget.value))}
+                            class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white accent-blue-600"
+                        />
+                    </div>
+                {:else}
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-[9px] uppercase tracking-wide text-slate-400">Stroke Width</span>
+                            <span class="text-[10px] font-black tabular-nums text-blue-600">{editor.selectedShape.strokeWidth || 2}px</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value={editor.selectedShape.strokeWidth || 2}
+                            oninput={(e) => editor.updateSelectedProperty('strokeWidth', parseInt(e.currentTarget.value))}
+                            class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white accent-blue-600"
                         />
                     </div>
                 {/if}

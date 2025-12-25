@@ -8,6 +8,7 @@
 	import WelcomeScreen from '$lib/components/WelcomeScreen.svelte';
 	import ZoomControls from '$lib/components/ZoomControls.svelte';
     import ShortcutHelp from '$lib/components/ShortcutHelp.svelte';
+    import { Layers } from 'lucide-svelte';
 
 	$effect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => editor.handleKeyDown(e);
@@ -94,6 +95,7 @@
 		<div
 			bind:this={editor.containerRef}
 			class={`relative flex-1 overflow-hidden bg-slate-200/50 ${editor.tool === 'hand' || editor.isSpacePressed ? 'cursor-grab active:cursor-grabbing' : ''}`}
+            style="touch-action: none;"
 			onpointerdown={(e) => editor.handlePointerDown(e)}
 			onpointermove={(e) => editor.handlePointerMove(e)}
 			onpointerup={() => editor.handlePointerUp()}
@@ -172,7 +174,36 @@
 			<ZoomControls />
 		</div>
 
-		<!-- Right Sidebar Panel -->
-		<Sidebar />
+		<!-- Right Sidebar Panel - Desktop: Fixed, Mobile: Drawer -->
+		<div
+			class={`absolute inset-y-0 right-0 z-40 w-80 transform transition-transform duration-300 md:relative md:translate-x-0 ${
+				editor.isMobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+			}`}
+		>
+			<Sidebar />
+            
+            <!-- Mobile Close Overlay -->
+            {#if editor.isMobileSidebarOpen}
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <div 
+                    class="fixed inset-0 -z-10 bg-slate-900/20 backdrop-blur-sm md:hidden"
+                    onclick={() => editor.isMobileSidebarOpen = false}
+                ></div>
+            {/if}
+		</div>
+
+        <!-- Mobile Sidebar Toggle -->
+        <button
+            onclick={() => editor.isMobileSidebarOpen = !editor.isMobileSidebarOpen}
+            class="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl shadow-blue-500/50 transition-all active:scale-95 md:hidden"
+        >
+            <Layers size={24} strokeWidth={2.5} />
+            {#if editor.shapes.length > 0}
+                <div class="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-4 ring-white">
+                    {editor.shapes.length}
+                </div>
+            {/if}
+        </button>
 	</div>
 </div>

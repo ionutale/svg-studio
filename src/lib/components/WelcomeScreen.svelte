@@ -8,7 +8,7 @@
 		<div
 			class="pointer-events-auto w-full max-w-lg overflow-hidden rounded-3xl border border-white/20 bg-white/80 p-1 shadow-2xl backdrop-blur-xl"
 		>
-			<div class="relative rounded-[calc(1.5rem-4px)] bg-white p-8 md:p-12">
+			<div class="relative rounded-[calc(1.5rem-4px)] bg-white p-6 md:p-12">
 				<!-- Decorative background element -->
 				<div
 					class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/10 blur-3xl"
@@ -19,9 +19,9 @@
 
 				<div class="relative">
 					<div
-						class="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 animate-in zoom-in duration-500"
+						class="mx-auto mb-6 md:mb-8 flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200 animate-in zoom-in duration-500"
 					>
-						<Sparkles size={40} />
+						<Sparkles class="h-8 w-8 md:h-10 md:w-10" />
 					</div>
 
 					<h3
